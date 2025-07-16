@@ -31,7 +31,7 @@ export default function Process() {
               진행 과정
             </span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">복잡한 반셀프인테리어를 3단계로 간단하게</p>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">복잡한 셀프인테리어를 3단계로 간단하게</p>
         </div>
 
         <div className="max-w-5xl mx-auto">

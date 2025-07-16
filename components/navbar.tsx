@@ -19,6 +19,7 @@ export default function Navbar() {
           <Link href="/about" className="transition-colors hover:text-primary">
             About Us
           </Link>
+
         </nav>
         <div className="flex items-center space-x-4">
           <Link href="https://github.com/amanesoft" target="_blank" rel="noreferrer">

@@ -11,7 +11,7 @@ export default function Differentiators() {
             </span>
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto px-4">
-            반셀프인테리어계의 테슬라, 인테리어AI만의 특별한 기술
+            셀프인테리어계의 테슬라, 인테리어AI만의 특별한 기술
           </p>
         </div>
 

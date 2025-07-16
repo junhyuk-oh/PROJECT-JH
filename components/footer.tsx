@@ -3,7 +3,7 @@ import { Bot, Mail, Phone, MapPin, Facebook, Instagram, Youtube } from "lucide-r
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-white py-16">
+    <footer className="bg-gray-800 text-gray-100 py-16">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* 브랜드 정보 */}
@@ -16,21 +16,21 @@ export default function Footer() {
                 인테리어AI
               </span>
             </Link>
-            <p className="text-gray-300 mb-6 max-w-md">
-              복잡한 반셀프인테리어를 AI가 체계적으로 관리해주는 개인 전문가 서비스
+            <p className="text-gray-200 mb-6 max-w-md">
+              복잡한 셀프인테리어를 AI가 체계적으로 관리해주는 개인 전문가 서비스
             </p>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-orange-400" />
-                <span className="text-gray-300">contact@interiorai.co.kr</span>
+                <span className="text-gray-200">contact@interiorai.co.kr</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-5 w-5 text-orange-400" />
-                <span className="text-gray-300">1588-0000</span>
+                <span className="text-gray-200">1588-0000</span>
               </div>
               <div className="flex items-center space-x-3">
                 <MapPin className="h-5 w-5 text-orange-400" />
-                <span className="text-gray-300">서울시 강남구 테헤란로 123</span>
+                <span className="text-gray-200">서울시 강남구 테헤란로 123</span>
               </div>
             </div>
           </div>
@@ -40,22 +40,22 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-6">서비스</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="#features" className="text-gray-300 hover:text-orange-400 transition-colors">
+                <Link href="#features" className="text-gray-200 hover:text-orange-400 transition-colors">
                   AI 맞춤 분석
                 </Link>
               </li>
               <li>
-                <Link href="#features" className="text-gray-300 hover:text-orange-400 transition-colors">
+                <Link href="#features" className="text-gray-200 hover:text-orange-400 transition-colors">
                   스마트 일정 관리
                 </Link>
               </li>
               <li>
-                <Link href="#features" className="text-gray-300 hover:text-orange-400 transition-colors">
+                <Link href="#features" className="text-gray-200 hover:text-orange-400 transition-colors">
                   업체 매칭
                 </Link>
               </li>
               <li>
-                <Link href="#features" className="text-gray-300 hover:text-orange-400 transition-colors">
+                <Link href="#features" className="text-gray-200 hover:text-orange-400 transition-colors">
                   현장 AI 분석
                 </Link>
               </li>
@@ -67,22 +67,22 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-6">고객지원</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="#" className="text-gray-300 hover:text-purple-400 transition-colors">
+                <Link href="#" className="text-gray-200 hover:text-purple-400 transition-colors">
                   이용가이드
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-300 hover:text-purple-400 transition-colors">
+                <Link href="#" className="text-gray-200 hover:text-purple-400 transition-colors">
                   자주묻는질문
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-300 hover:text-purple-400 transition-colors">
+                <Link href="#" className="text-gray-200 hover:text-purple-400 transition-colors">
                   1:1 문의
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-300 hover:text-purple-400 transition-colors">
+                <Link href="#" className="text-gray-200 hover:text-purple-400 transition-colors">
                   공지사항
                 </Link>
               </li>
@@ -94,18 +94,18 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex space-x-6 mb-4 md:mb-0">
-              <Link href="#" className="text-gray-400 hover:text-purple-400 transition-colors">
+              <Link href="#" className="text-gray-300 hover:text-purple-400 transition-colors">
                 <Facebook className="h-6 w-6" />
               </Link>
-              <Link href="#" className="text-gray-400 hover:text-purple-400 transition-colors">
+              <Link href="#" className="text-gray-300 hover:text-purple-400 transition-colors">
                 <Instagram className="h-6 w-6" />
               </Link>
-              <Link href="#" className="text-gray-400 hover:text-purple-400 transition-colors">
+              <Link href="#" className="text-gray-300 hover:text-purple-400 transition-colors">
                 <Youtube className="h-6 w-6" />
               </Link>
             </div>
 
-            <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 text-sm text-gray-400">
+            <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 text-sm text-gray-300">
               <Link href="#" className="hover:text-purple-400 transition-colors">
                 개인정보처리방침
               </Link>

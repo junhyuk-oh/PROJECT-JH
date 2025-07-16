@@ -1,3 +1,5 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Play, Sparkles } from "lucide-react"
 
@@ -34,6 +36,15 @@ export default function Hero() {
           <Button
             size="lg"
             className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-6 md:px-8 py-3 md:py-4 text-base md:text-lg"
+            onClick={() => {
+              const element = document.getElementById('experience');
+              if (element) {
+                element.scrollIntoView({ 
+                  behavior: 'smooth',
+                  block: 'start'
+                });
+              }
+            }}
           >
             📋 내 공정표 만들기
             <ArrowRight className="ml-2 h-5 w-5" />

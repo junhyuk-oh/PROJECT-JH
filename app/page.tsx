@@ -5,6 +5,7 @@ import AIExperience from "@/components/ai-experience"
 import Process from "@/components/process"
 import Differentiators from "@/components/differentiators"
 import Footer from "@/components/footer"
+// import { UserProfile } from "@/components/UserProfile"
 
 export default function Home() {
   return (
@@ -12,9 +13,10 @@ export default function Home() {
       <Header />
       <Hero />
       <Features />
-      <AIExperience />
       <Process />
+      <AIExperience />
       <Differentiators />
+      {/* <UserProfile /> */}
       <Footer />
     </div>
   )

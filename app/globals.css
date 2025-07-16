@@ -107,6 +107,7 @@
 /* 스크롤 부드럽게 */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 4rem; /* Account for sticky header */
 }
 
 /* 커스텀 스크롤바 */
@@ -156,4 +157,48 @@ html {
   .bg-gradient-to-r {
     background: #f97316 !important;
   }
+}
+
+select option {
+  color: black;
+  background-color: white;
+}
+
+.dark select option {
+  color: white;
+  background-color: #333;
+}
+
+/* Date input styling */
+input[type="date"] {
+  background-color: white;
+  color: black;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  color: black;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  background-color: white;
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  color: black;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  color: black;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  color: black;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: black;
 }

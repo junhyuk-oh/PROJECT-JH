@@ -1,0 +1,27 @@
+/* 모바일 스크롤바 숨기기 */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* 모바일 탭 스크롤 표시기 */
+@media (max-width: 640px) {
+  .tab-scroll-indicator {
+    position: relative;
+  }
+  
+  .tab-scroll-indicator::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.8));
+    pointer-events: none;
+  }
+}

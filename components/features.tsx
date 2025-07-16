@@ -50,7 +50,7 @@ export default function Features() {
             </span>
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto px-4">
-            복잡한 반셀프인테리어를 AI가 체계적으로 관리해주는 6가지 핵심 기능
+            복잡한 셀프인테리어를 AI가 체계적으로 관리해주는 6가지 핵심 기능
           </p>
         </div>
 

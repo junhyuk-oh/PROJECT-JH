@@ -1,8 +1,14 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Bot, Menu } from "lucide-react"
+import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog"
+import { AuthForm } from "@/components/AuthForm"
+import { useState } from "react"
 
 export default function Header() {
+  const [open, setOpen] = useState(false)
   return (
     <header className="sticky top-0 z-50 w-full border-b border-amber-200/50 bg-white/90 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -11,7 +17,7 @@ export default function Header() {
             <Bot className="h-5 w-5 text-white" />
           </div>
           <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-            인테리어AI
+            SELFIN
           </span>
         </Link>
 
@@ -31,9 +37,16 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" className="hidden md:flex">
-            로그인
-          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button variant="default" className="hidden md:flex bg-purple-600 text-white hover:bg-purple-700">
+                로그인/회원가입
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <AuthForm />
+            </DialogContent>
+          </Dialog>
           <Button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600">
             무료 시작하기
           </Button>
