@@ -7,6 +7,7 @@ import { getProject } from '@/lib/taskDatabase'
 import { ChevronLeft, Calendar, BarChart3, Edit, Trash2, Clock, Home, Users, AlertCircle } from 'lucide-react'
 import { formatDate } from '@/lib/utils/dateUtils'
 import { TASK_TYPE_LABELS, TASK_ICONS } from '@/lib/constants/calendar'
+import { RiskDashboard } from '@/components/RiskDashboard'
 
 interface ScheduleData {
   schedule: Task[]
@@ -316,6 +317,12 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* 리스크 대시보드 */}
+            <RiskDashboard 
+              tasks={project.schedule.schedule}
+              projectStartDate={new Date(project.startDate)}
+            />
 
             {/* 빠른 액션 */}
             <div className="grid grid-cols-2 gap-3">

@@ -164,11 +164,16 @@ export interface ScheduleOptions {
   area: number
   budget: number
   startDate: Date
+  currentState?: string
   preferences?: {
     workingDays?: number[]  // 작업 가능 요일 (0: 일요일, 6: 토요일)
     holidays?: Date[]       // 공휴일
     priority?: 'speed' | 'cost' | 'quality'
   }
+  // 리스크 평가 필드
+  weatherSensitivity?: number  // 0-100
+  complexity?: string          // simple/normal/complex
+  scheduleFlexibility?: string // flexible/normal/strict
 }
 
 // CPM 계산 결과
