@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* 노션 스타일 기본 설정 */
+  :root {
+    --notion-bg: #FFFFFF;
+    --notion-bg-secondary: #FAFAF9;
+    --notion-bg-tertiary: #F7F6F3;
+    --notion-text: #37352F;
+    --notion-text-secondary: #787774;
+    --notion-text-tertiary: #9B9A97;
+    --notion-border: #E9E9E7;
+    --notion-border-light: #F2F1EE;
+    --notion-blue: #3B82F6;
+    --notion-green: #10B981;
+    --notion-orange: #F59E0B;
+    --notion-red: #DC2626;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    @apply bg-white text-gray-900;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+  }
+
+  /* 노션 스타일 스크롤바 */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-400;
+    border-radius: 10px;
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}
+
+@layer components {
+  /* 노션 스타일 버튼 */
+  .notion-button {
+    @apply px-3 py-1.5 rounded-md text-sm font-medium
+           transition-all duration-200 ease-out
+           hover:bg-gray-100 active:bg-gray-200;
+  }
+
+  .notion-button-primary {
+    @apply bg-gray-900 text-white
+           hover:bg-gray-800 active:bg-gray-700;
+  }
+
+  /* 노션 스타일 카드 */
+  .notion-card {
+    @apply bg-white rounded-lg border border-gray-200
+           shadow-sm hover:shadow-md
+           transition-shadow duration-200;
+  }
+
+  /* 노션 스타일 입력 필드 */
+  .notion-input {
+    @apply w-full px-3 py-2 rounded-md text-base
+           bg-white border border-gray-200
+           placeholder:text-gray-400
+           focus:outline-none focus:ring-2 focus:ring-blue-500/20
+           focus:border-blue-500 transition-all duration-200;
+  }
+
+  /* 노션 스타일 선택 가능한 항목 */
+  .notion-selectable {
+    @apply cursor-pointer rounded-md
+           hover:bg-gray-100 active:bg-gray-200
+           transition-colors duration-150;
+  }
+
+  /* 노션 스타일 페이지 제목 */
+  .notion-title {
+    @apply text-3xl font-bold tracking-tight;
+  }
+
+  /* 노션 스타일 섹션 제목 */
+  .notion-heading {
+    @apply text-xl font-semibold;
+  }
+
+  /* 노션 스타일 설명 텍스트 */
+  .notion-description {
+    @apply text-gray-600 text-sm;
+  }
+
+  /* 노션 스타일 구분선 */
+  .notion-divider {
+    @apply h-px bg-gray-200 my-4;
+  }
+}
+
+@layer utilities {
+  /* 모달 애니메이션 */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .animate-slideUp {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  /* 모바일 터치 영역 최적화 */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+
+  /* 안전 영역 패딩 (iOS) */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}

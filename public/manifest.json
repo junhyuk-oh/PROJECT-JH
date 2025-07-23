@@ -1,0 +1,23 @@
+{
+  "name": "SELFFIN - 인테리어 일정 관리",
+  "short_name": "SELFFIN",
+  "description": "AI 기반 인테리어 프로젝트 일정 관리 시스템",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
