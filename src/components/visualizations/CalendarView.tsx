@@ -1,23 +1,35 @@
 "use client"
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Calendar } from '@/components/ui/Calendar'
-import { ScheduledTask } from '@/lib/types'
-import { X, Volume2, Clock, AlertCircle, Star } from 'lucide-react'
-import { format } from 'date-fns'
-import { ko } from 'date-fns/locale'
+import { X, Volume2, Clock, Star } from 'lucide-react'
+
+// 통합 타입 임포트
+import type { Task as ScheduledTask, TaskType } from '@/types'
+
+// 통합 상수 임포트
 import {
   TASK_ICONS,
-  TASK_TYPE_COLORS,
   TASK_TYPE_LABELS,
+  TASK_COLORS as TASK_TYPE_COLORS,
   STATUS_COLORS,
-  STATUS_TEXT_COLORS,
   STATUS_LABELS,
+} from '@/constants'
+
+// 유틸리티 임포트
+import { 
+  groupTasksByDate, 
+  getTasksForDate,
   TASK_DISPLAY,
-  SPECIAL_INDICATORS
-} from '@/lib/constants/calendar'
-import { groupTasksByDate, getTasksForDate } from '@/lib/utils/calendarUtils'
-import { calculateTaskStatistics, getTasksByType } from '@/lib/utils/taskStatistics'
+  SPECIAL_INDICATORS 
+} from '@/lib/utils/calendarUtils'
+import { 
+  calculateTaskStatistics, 
+  getTasksByType 
+} from '@/lib/utils/taskStatistics'
+import { formatDate } from '@/lib/utils'
+
+// 컴포넌트 임포트
 import { TaskCard } from '@/components/TaskCard'
 
 interface CalendarViewProps {
@@ -25,43 +37,113 @@ interface CalendarViewProps {
   criticalPath?: string[]
 }
 
+// 범례 아이템 컴포넌트
+interface LegendItemProps {
+  icon: React.ReactNode
+  label: string
+  className?: string
+}
+
+function LegendItem({ icon, label, className = "" }: LegendItemProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={className}>{icon}</span>
+      <span className="text-gray-600">{label}</span>
+    </div>
+  )
+}
+
+// 뷰 모드 버튼 컴포넌트
+interface ViewModeButtonProps {
+  active: boolean
+  onClick: () => void
+  label: string
+}
+
+function ViewModeButton({ active, onClick, label }: ViewModeButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+        active 
+          ? 'bg-blue-500 text-white' 
+          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
+// 작업 섹션 컴포넌트
+interface TaskSectionProps {
+  title: string
+  tasks: ScheduledTask[]
+  criticalPath: string[]
+  icon: string
+  iconColor: string
+}
+
+function TaskSection({ title, tasks, criticalPath, icon, iconColor }: TaskSectionProps) {
+  if (tasks.length === 0) return null
+  
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+        <span className={iconColor}>{icon}</span> {title}
+      </h3>
+      <div className="space-y-2">
+        {tasks.map(task => (
+          <TaskCard 
+            key={task.id} 
+            task={task as any} 
+            isCritical={criticalPath.includes(task.id)} 
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+type ViewModeType = 'month' | 'week'
+
 export function CalendarView({ tasks, criticalPath = [] }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [viewMode, setViewMode] = useState<'month' | 'week'>('month')
+  const [viewMode, setViewMode] = useState<ViewModeType>('month')
   
   // 날짜별 작업 그룹핑
   const tasksByDate = useMemo(() => groupTasksByDate(tasks), [tasks])
   
   // 전체 진행률 계산
   const overallProgress = useMemo(() => {
-    const stats = calculateTaskStatistics(tasks, 0)
+    const stats = calculateTaskStatistics(tasks as any, 0)
     return stats.progress.overall
   }, [tasks])
   
   // 날짜 클릭 핸들러
-  const handleDateClick = (date: Date) => {
+  const handleDateClick = useCallback((date: Date) => {
     const { all } = getTasksForDate(tasksByDate, date)
     if (all.length > 0) {
       setSelectedDate(date)
       setShowModal(true)
     }
-  }
+  }, [tasksByDate])
   
   // 모달 닫기
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setShowModal(false)
     setSelectedDate(null)
-  }
+  }, [])
   
   // 날짜 렌더링 함수
-  const renderDate = (date: Date) => {
+  const renderDate = useCallback((date: Date) => {
     const { starting, ongoing, ending, all } = getTasksForDate(tasksByDate, date)
     if (all.length === 0) return null
     
     // 작업 타입별로 그룹핑
-    const typeGroups = getTasksByType(all)
+    const typeGroups = getTasksByType(all as any)
     
     // 중요 정보 체크
     const hasNoiseWork = all.some(task => task.noiseLevel === 'high')
@@ -72,20 +154,43 @@ export function CalendarView({ tasks, criticalPath = [] }: CalendarViewProps) {
       <div className="space-y-1">
         {/* 작업 시작/종료 표시 */}
         <div className="flex items-center justify-between text-xs">
-          {starting.length > 0 && <span className="text-green-600">{TASK_DISPLAY.ARROW_SYMBOLS.START} {starting.length}</span>}
-          {ongoing.length > 0 && <span className="text-blue-600">{TASK_DISPLAY.ARROW_SYMBOLS.ONGOING} {ongoing.length}</span>}
-          {ending.length > 0 && <span className="text-red-600">{TASK_DISPLAY.ARROW_SYMBOLS.END} {ending.length}</span>}
+          {starting.length > 0 && (
+            <span className="text-green-600">
+              {TASK_DISPLAY.ARROW_SYMBOLS.START} {starting.length}
+            </span>
+          )}
+          {ongoing.length > 0 && (
+            <span className="text-blue-600">
+              {TASK_DISPLAY.ARROW_SYMBOLS.ONGOING} {ongoing.length}
+            </span>
+          )}
+          {ending.length > 0 && (
+            <span className="text-red-600">
+              {TASK_DISPLAY.ARROW_SYMBOLS.END} {ending.length}
+            </span>
+          )}
         </div>
         
         {/* 작업 타입 아이콘 표시 */}
         <div className="flex flex-wrap gap-0.5 justify-center">
-          {Object.entries(typeGroups).slice(0, TASK_DISPLAY.MAX_ICONS_PER_DATE).map(([type]) => (
-            <span key={type} className="text-xs" title={TASK_TYPE_LABELS[type]}>
-              {TASK_ICONS[type] || '📌'}
-            </span>
-          ))}
+          {Object.entries(typeGroups)
+            .slice(0, TASK_DISPLAY.MAX_ICONS_PER_DATE)
+            .map(([type]) => {
+              const taskType = type as TaskType
+              return (
+                <span 
+                  key={type} 
+                  className="text-xs" 
+                  title={TASK_TYPE_LABELS[taskType]}
+                >
+                  {TASK_ICONS[taskType] || '📌'}
+                </span>
+              )
+            })}
           {Object.keys(typeGroups).length > TASK_DISPLAY.MAX_ICONS_PER_DATE && (
-            <span className="text-xs text-gray-500">+{Object.keys(typeGroups).length - TASK_DISPLAY.MAX_ICONS_PER_DATE}</span>
+            <span className="text-xs text-gray-500">
+              +{Object.keys(typeGroups).length - TASK_DISPLAY.MAX_ICONS_PER_DATE}
+            </span>
           )}
         </div>
         
@@ -97,7 +202,7 @@ export function CalendarView({ tasks, criticalPath = [] }: CalendarViewProps) {
         </div>
       </div>
     )
-  }
+  }, [tasksByDate, criticalPath])
   
   // 선택된 날짜의 작업들
   const selectedTasksData = selectedDate ? getTasksForDate(tasksByDate, selectedDate) : null
@@ -125,26 +230,16 @@ export function CalendarView({ tasks, criticalPath = [] }: CalendarViewProps) {
           {/* 뷰 모드 전환 */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-2">
-              <button
+              <ViewModeButton
+                active={viewMode === 'month'}
                 onClick={() => setViewMode('month')}
-                className={`px-3 py-1 text-sm rounded-md ${
-                  viewMode === 'month' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                월간
-              </button>
-              <button
+                label="월간"
+              />
+              <ViewModeButton
+                active={viewMode === 'week'}
                 onClick={() => setViewMode('week')}
-                className={`px-3 py-1 text-sm rounded-md ${
-                  viewMode === 'week' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                주간
-              </button>
+                label="주간"
+              />
             </div>
           </div>
         </div>
@@ -162,26 +257,28 @@ export function CalendarView({ tasks, criticalPath = [] }: CalendarViewProps) {
         <div className="mt-4 space-y-2 bg-gray-50 rounded-lg p-3">
           <p className="text-xs font-medium text-gray-700 mb-2">범례</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span>→</span>
-              <span className="text-gray-600">작업 시작</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>←</span>
-              <span className="text-gray-600">작업 종료</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Star className="w-3 h-3 text-red-500" />
-              <span className="text-gray-600">임계경로</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Volume2 className="w-3 h-3 text-orange-500" />
-              <span className="text-gray-600">소음작업</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-3 h-3 text-blue-500" />
-              <span className="text-gray-600">건조시간</span>
-            </div>
+            <LegendItem 
+              icon={TASK_DISPLAY.ARROW_SYMBOLS.START} 
+              label="작업 시작" 
+              className="text-green-600" 
+            />
+            <LegendItem 
+              icon={TASK_DISPLAY.ARROW_SYMBOLS.END} 
+              label="작업 종료" 
+              className="text-red-600" 
+            />
+            <LegendItem 
+              icon={<Star className="w-3 h-3 text-red-500" />} 
+              label="임계경로" 
+            />
+            <LegendItem 
+              icon={<Volume2 className="w-3 h-3 text-orange-500" />} 
+              label="소음작업" 
+            />
+            <LegendItem 
+              icon={<Clock className="w-3 h-3 text-blue-500" />} 
+              label="건조시간" 
+            />
           </div>
         </div>
       </div>
@@ -193,12 +290,7 @@ export function CalendarView({ tasks, criticalPath = [] }: CalendarViewProps) {
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
-                {selectedDate.toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  weekday: 'long'
-                })}
+                {formatDate(selectedDate)}
               </h2>
               <button
                 onClick={closeModal}
@@ -217,59 +309,29 @@ export function CalendarView({ tasks, criticalPath = [] }: CalendarViewProps) {
                 </p>
               ) : (
                 <>
-                  {/* 시작하는 작업 */}
-                  {selectedTasksData.starting.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <span className="text-green-600">→</span> 시작하는 작업
-                      </h3>
-                      <div className="space-y-2">
-                        {selectedTasksData.starting.map(task => (
-                          <TaskCard 
-                            key={task.id} 
-                            task={task} 
-                            isCritical={criticalPath.includes(task.id)} 
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <TaskSection
+                    title="시작하는 작업"
+                    tasks={selectedTasksData.starting}
+                    criticalPath={criticalPath}
+                    icon={TASK_DISPLAY.ARROW_SYMBOLS.START}
+                    iconColor="text-green-600"
+                  />
                   
-                  {/* 진행중인 작업 */}
-                  {selectedTasksData.ongoing.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <span className="text-blue-600">━</span> 진행중인 작업
-                      </h3>
-                      <div className="space-y-2">
-                        {selectedTasksData.ongoing.map(task => (
-                          <TaskCard 
-                            key={task.id} 
-                            task={task} 
-                            isCritical={criticalPath.includes(task.id)} 
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <TaskSection
+                    title="진행중인 작업"
+                    tasks={selectedTasksData.ongoing}
+                    criticalPath={criticalPath}
+                    icon={TASK_DISPLAY.ARROW_SYMBOLS.ONGOING}
+                    iconColor="text-blue-600"
+                  />
                   
-                  {/* 종료되는 작업 */}
-                  {selectedTasksData.ending.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <span className="text-red-600">←</span> 종료되는 작업
-                      </h3>
-                      <div className="space-y-2">
-                        {selectedTasksData.ending.map(task => (
-                          <TaskCard 
-                            key={task.id} 
-                            task={task} 
-                            isCritical={criticalPath.includes(task.id)} 
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <TaskSection
+                    title="종료되는 작업"
+                    tasks={selectedTasksData.ending}
+                    criticalPath={criticalPath}
+                    icon={TASK_DISPLAY.ARROW_SYMBOLS.END}
+                    iconColor="text-red-600"
+                  />
                 </>
               )}
             </div>

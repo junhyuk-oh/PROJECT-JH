@@ -1,31 +1,43 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)",
-      "Bash(npm install:*)",
-      "Bash(npm run dev:*)",
-      "Bash(netsh:*)",
-      "Bash(mv:*)",
-      "Bash(rm:*)",
-      "Bash(npx next:*)",
-      "WebFetch(domain:github.com)",
-      "Bash(npx:*)",
-      "Bash(find:*)",
-      "Bash(curl:*)",
-      "Bash(dir C:Users오준혁selffin.nextstaticchunks*.css)",
-      "Bash(ls:*)",
-      "Bash(grep:*)",
-      "Bash(npm run lint)",
-      "Bash(npm run typecheck:*)",
-      "Bash(pip --version)",
-      "Bash(where python)",
-      "Bash(python:*)",
-      "Bash(npm run build:*)",
-      "Bash(taskkill:*)",
-      "Bash(git init:*)",
-      "Bash(git add:*)",
-      "Bash(git config:*)"
+      "Bash(git add:*)"
     ],
     "deny": []
+  },
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_DATA_DIR": "C:\\Users\\오준혁\\selffin\\.memory",
+        "MEMORY_PROJECT": "selffin"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-filesystem"
+      ],
+      "env": {
+        "ALLOWED_DIRECTORIES": [
+          "C:\\Users\\오준혁\\selffin"
+        ]
+      }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "everything": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-everything"
+      ]
+    }
   }
 }

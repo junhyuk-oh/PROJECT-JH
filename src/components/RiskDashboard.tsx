@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Task } from '@/lib/types'
+import { Task } from '@/types'
 import { AlertTriangle, Cloud, Calendar, TrendingUp } from 'lucide-react'
 
 interface RiskDashboardProps {

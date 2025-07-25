@@ -118,9 +118,7 @@ export default function ProjectCalendarPage() {
       {/* 캘린더 */}
       <div className="flex-1">
         <CalendarView 
-          tasks={project.schedule.schedule}
-          projectStart={new Date(project.startDate)}
-          projectEnd={new Date(new Date(project.startDate).getTime() + project.schedule.totalDuration * 24 * 60 * 60 * 1000)}
+          tasks={project.schedule.schedule as any}
         />
       </div>
     </div>

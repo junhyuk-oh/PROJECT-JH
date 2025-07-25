@@ -5,6 +5,10 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development'
 })
 
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -15,7 +19,24 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   experimental: {
-    optimizePackageImports: ['lucide-react', 'recharts', 'date-fns'],
+    optimizePackageImports: [
+      'lucide-react', 
+      'recharts', 
+      'date-fns',
+      '@tanstack/react-query',
+      'react-dom'
+    ],
+  },
+  // 번들 최적화
+  webpack: (config, { dev, isServer }) => {
+    // 프로덕션에서 불필요한 모듈 제거
+    if (!dev && !isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@/components/common/PerformanceDebugger': false,
+      }
+    }
+    return config
   },
   images: {
     remotePatterns: [
@@ -27,4 +48,4 @@ const nextConfig = {
   },
 }
 
-module.exports = withPWA(nextConfig)
+module.exports = withBundleAnalyzer(withPWA(nextConfig))

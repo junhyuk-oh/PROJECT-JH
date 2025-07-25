@@ -1,4 +1,12 @@
-import { ScheduledTask } from '@/lib/types'
+import { Task as ScheduledTask } from '@/types'
+export { TASK_DISPLAY } from '@/lib/constants/calendar'
+
+// SPECIAL_INDICATORS 임시 정의
+export const SPECIAL_INDICATORS = {
+  CRITICAL: 'critical',
+  WEATHER: 'weather', 
+  NOISE: 'noise'
+}
 
 /**
  * 날짜별 작업 그룹

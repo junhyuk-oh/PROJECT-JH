@@ -1,6 +1,39 @@
 # SELFFIN 프로젝트 개발 가이드라인 (윈도우 네이티브)
 
+> 이 문서는 Claude Code가 프로젝트 작업 시 자동으로 참조하는 가이드라인입니다.
+> 프로젝트 설정, 코딩 표준, 체계적 작업 프로세스를 포함합니다.
+
 ## 🚨 필수 작업 환경 설정
+
+### 테스트 환경 설정 (필수)
+```bash
+# Jest 및 Testing Library 설치
+npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event
+npm install --save-dev jest-environment-jsdom @types/jest
+
+# Jest 설정 파일 생성 (jest.config.js)
+module.exports = {
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleNameMapping: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  collectCoverageFrom: [
+    'src/**/*.{js,jsx,ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/app/**/layout.tsx',
+    '!src/app/**/loading.tsx',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    }
+  }
+}
+```
 
 ### 윈도우 네이티브 프로젝트 경로 규칙
 - **유일한 작업 경로**: `C:\Users\오준혁\selffin\`
@@ -276,6 +309,215 @@ const handleClick = () => {
 - [ ] 색상만으로 정보 전달 금지
 - [ ] 폼 요소에 label 연결
 
+### 16. 테스트 코드 작성 가이드 (강화)
+
+#### 필수 테스트 패턴
+```typescript
+// 1. 컴포넌트 렌더링 테스트
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { ComponentName } from '@/components/ComponentName'
+
+describe('ComponentName', () => {
+  // 기본 렌더링 테스트
+  it('should render correctly', () => {
+    render(<ComponentName />)
+    expect(screen.getByRole('button')).toBeInTheDocument()
+  })
+
+  // Props 테스트
+  it('should display correct props', () => {
+    const props = { title: 'Test Title', disabled: true }
+    render(<ComponentName {...props} />)
+    
+    expect(screen.getByText('Test Title')).toBeInTheDocument()
+    expect(screen.getByRole('button')).toBeDisabled()
+  })
+
+  // 이벤트 핸들링 테스트
+  it('should handle user interactions', async () => {
+    const user = userEvent.setup()
+    const handleClick = jest.fn()
+    render(<ComponentName onClick={handleClick} />)
+    
+    await user.click(screen.getByRole('button'))
+    expect(handleClick).toHaveBeenCalledTimes(1)
+  })
+
+  // 에러 상태 테스트
+  it('should handle error states', () => {
+    const props = { error: new Error('Test error') }
+    render(<ComponentName {...props} />)
+    
+    expect(screen.getByText('Test error')).toBeInTheDocument()
+  })
+
+  // 로딩 상태 테스트
+  it('should show loading state', () => {
+    render(<ComponentName loading={true} />)
+    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument()
+  })
+})
+
+// 2. 커스텀 훅 테스트
+import { renderHook, act, waitFor } from '@testing-library/react'
+import { useCustomHook } from '@/hooks/useCustomHook'
+
+describe('useCustomHook', () => {
+  it('should initialize with correct default values', () => {
+    const { result } = renderHook(() => useCustomHook())
+    
+    expect(result.current.data).toBeNull()
+    expect(result.current.loading).toBe(true)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('should handle data fetching', async () => {
+    const { result } = renderHook(() => useCustomHook('test-id'))
+    
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+    
+    expect(result.current.data).toBeDefined()
+  })
+
+  it('should handle errors gracefully', async () => {
+    // Mock API error
+    const { result } = renderHook(() => useCustomHook('error-id'))
+    
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error)
+    })
+  })
+})
+
+// 3. 유틸리티 함수 테스트
+import { formatDate, calculateDuration } from '@/lib/utils'
+
+describe('Utility Functions', () => {
+  describe('formatDate', () => {
+    it('should format date correctly', () => {
+      const date = new Date('2025-01-24')
+      expect(formatDate(date)).toBe('2025년 1월 24일')
+    })
+
+    it('should handle invalid dates', () => {
+      expect(formatDate(null)).toBe('-')
+      expect(formatDate(undefined)).toBe('-')
+    })
+  })
+
+  describe('calculateDuration', () => {
+    it('should calculate correct duration', () => {
+      const start = new Date('2025-01-01')
+      const end = new Date('2025-01-10')
+      expect(calculateDuration(start, end)).toBe(9)
+    })
+
+    it('should handle edge cases', () => {
+      const sameDate = new Date('2025-01-01')
+      expect(calculateDuration(sameDate, sameDate)).toBe(0)
+    })
+  })
+})
+```
+
+#### 테스트 작성 필수 규칙
+1. **모든 새 함수/컴포넌트는 테스트와 함께 작성**
+2. **테스트 파일명**: `ComponentName.test.tsx` 또는 `functionName.test.ts`
+3. **테스트 위치**: `__tests__/` 폴더 또는 파일과 동일한 위치
+4. **커버리지 목표**: 최소 80% 이상
+5. **테스트 케이스**: 성공/실패/엣지케이스 모두 포함
+
+---
+
+## 🚀 체계적 작업 프로세스
+
+### 📋 새 기능 개발 체크리스트
+
+```markdown
+### 1. 계획 단계 (10분)
+- [ ] 작업 로그에 목표 기록
+- [ ] 필요한 파일 구조 스케치
+- [ ] 예상 소요 시간 기록
+
+### 2. 타입 정의 (5분)
+- [ ] types/index.ts에 필요한 타입 추가
+- [ ] JSDoc 주석으로 타입 설명
+
+### 3. 구현 단계 (개발 시간의 60%)
+- [ ] 커스텀 훅 먼저 작성 (로직 분리)
+- [ ] UI 컴포넌트 작성
+- [ ] 상수는 constants/에 분리
+- [ ] 유틸리티는 utils/에 분리
+
+### 4. 최적화 단계 (20%)
+- [ ] React.memo 적용 검토
+- [ ] useMemo/useCallback 적용
+- [ ] 번들 크기 확인
+
+### 5. 테스트 단계 (15%) - 필수!
+- [ ] 단위 테스트 작성 (함수/훅)
+- [ ] 컴포넌트 테스트 작성 (렌더링/인터랙션)
+- [ ] 통합 테스트 작성 (여러 컴포넌트 조합)
+- [ ] 엣지 케이스 테스트 (에러 상황, 빈 데이터 등)
+- [ ] 테스트 커버리지 80% 이상 확보
+- [ ] `npm run test:ci` 통과 확인
+
+### 6. 문서화 단계 (10%)
+- [ ] 작업 로그 업데이트
+- [ ] 컴포넌트 사용법 주석
+```
+
+### 📅 일일 작업 루틴
+
+#### 🌅 작업 시작 시 (10분)
+```bash
+# 1. 최신 코드 동기화
+git pull origin main
+
+# 2. 의존성 확인 및 타입 체크
+npm install
+npm run typecheck
+
+# 3. 개발 서버 시작
+npm run dev
+
+# 4. 작업 로그 확인
+code logs/작업로그.md
+```
+
+#### 💻 작업 중
+- 기능 단위로 커밋 (최대 2시간마다)
+- 복잡한 로직은 주석 추가
+- **테스트 코드 동시 작성 (필수)** 🧪
+  - 함수 작성 → 즉시 테스트 작성
+  - 컴포넌트 작성 → 렌더링 테스트 작성
+  - 테스트 실행: `npm run test` (watch 모드)
+
+#### 🌙 작업 종료 시 (15분)
+```bash
+# 1. 전체 품질 체크 (테스트 포함)
+npm run check:full
+
+# 2. 테스트 커버리지 확인
+npm run test:coverage
+
+# 3. 작업 로그 업데이트
+# 4. 커밋 및 푸시
+git add .
+git commit -m "feat: [작업 내용]"
+git push origin main
+```
+
+### 🎯 리팩토링 우선순위
+
+1. **타입 안정성** - any 타입 제거, 명시적 타입 정의
+2. **코드 중복 제거** - 공통 로직 추출, 재사용 가능한 컴포넌트화
+3. **성능 최적화** - 불필요한 리렌더링 방지, 메모이제이션
+4. **가독성 개선** - 복잡한 조건문 간소화, 의미있는 변수명
+
 ---
 
 ## 🔧 일반적인 문제 해결
@@ -297,9 +539,66 @@ npm run lint
 npm run build
 ```
 
+### 자주 발생하는 런타임 에러와 해결책
+
+#### 1. Hook 순서 에러
+```typescript
+// ❌ 문제: 조건문 안에서 Hook 사용
+if (condition) {
+  const [state] = useState()
+}
+
+// ✅ 해결: Hook을 최상위에서 호출
+const [state] = useState()
+if (condition) {
+  // 로직
+}
+```
+
+#### 2. 무한 리렌더링
+```typescript
+// ❌ 문제: 의존성 배열에 매번 새로운 객체
+useEffect(() => {
+  setData({})
+}, [data])
+
+// ✅ 해결: 필요한 의존성만 포함
+useEffect(() => {
+  setData(prev => ({ ...prev }))
+}, [])
+```
+
+#### 3. 메모리 누수
+```typescript
+// ✅ cleanup 함수 사용
+useEffect(() => {
+  const timer = setTimeout(() => {}, 1000)
+  return () => clearTimeout(timer)  // cleanup
+}, [])
+```
+
 ---
 
 ## 🗂️ Git 버전 관리 (중요!)
+
+### Git 커밋 메시지 규칙
+```bash
+# 형식: <type>: <subject>
+
+# Type 종류
+feat: 새로운 기능
+fix: 버그 수정
+docs: 문서 수정
+style: 코드 포맷팅
+refactor: 코드 리팩토링
+test: 테스트 코드
+chore: 빌드 업무, 패키지 매니저 설정
+
+# 예시
+feat: 프로젝트 필터링 기능 추가
+fix: 간트차트 그리드 정렬 문제 수정
+refactor: 캘린더 컴포넌트 분리 및 최적화
+```
 
 ### 수정 작업 전 반드시 실행
 ```cmd
@@ -420,6 +719,32 @@ git config --global user.email "your.email@example.com"
 
 ---
 
+## 🛠 작업 효율화 Scripts
+
+package.json에 추가 권장:
+```json
+{
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "check": "npm run typecheck && npm run lint && npm run test:ci",
+    "check:full": "npm run typecheck && npm run lint && npm run test:ci && npm run build",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "test": "jest --watch",
+    "test:ci": "jest --ci --coverage",
+    "test:coverage": "jest --coverage --watchAll=false",
+    "test:debug": "jest --detectOpenHandles --forceExit",
+    "build:analyze": "ANALYZE=true next build",
+    "clean": "rm -rf .next node_modules coverage",
+    "fresh": "npm run clean && npm install && npm run dev",
+    "pre-commit": "npm run check:full"
+  }
+}
+```
+
+---
+
 ## 📦 의존성 관리
 
 ### 주요 의존성
@@ -460,3 +785,148 @@ npm run start
 - Supabase 연결 정보 등 민감한 정보 관리
 
 **💡 중요**: 환경 변수 파일은 Git에 커밋하지 말고 `.gitignore`에 포함시키세요!
+
+---
+
+## 📊 프로젝트 구조 확장 가이드
+
+### 권장 폴더 구조
+```
+src/
+├── app/                    # Next.js 페이지
+├── components/             
+│   ├── common/            # 재사용 가능한 공통 컴포넌트
+│   ├── [feature]/         # 기능별 컴포넌트 폴더
+│   └── ui/                # 순수 UI 컴포넌트
+├── hooks/                 # 커스텀 훅
+├── lib/                   
+│   ├── utils/            # 유틸리티 함수
+│   ├── services/         # API 서비스
+│   └── algorithms/       # 비즈니스 로직 (CPM 등)
+├── types/                # TypeScript 타입 정의
+├── constants/            # 상수 정의
+├── contexts/             # React Context
+├── config/              # 설정 파일
+└── __tests__/           # 테스트 파일
+```
+
+### 커스텀 훅 템플릿 (확장판)
+```typescript
+// src/hooks/useFeatureName.ts
+import { useState, useEffect, useCallback } from 'react'
+import { FeatureData } from '@/types'
+
+interface UseFeatureNameOptions {
+  autoFetch?: boolean
+  initialData?: FeatureData | null
+}
+
+interface UseFeatureNameReturn {
+  data: FeatureData | null
+  loading: boolean
+  error: Error | null
+  refetch: () => void
+  update: (data: Partial<FeatureData>) => Promise<void>
+  reset: () => void
+}
+
+export function useFeatureName(
+  id?: string, 
+  options: UseFeatureNameOptions = {}
+): UseFeatureNameReturn {
+  const { autoFetch = true, initialData = null } = options
+  
+  const [data, setData] = useState<FeatureData | null>(initialData)
+  const [loading, setLoading] = useState(autoFetch)
+  const [error, setError] = useState<Error | null>(null)
+  
+  const fetchData = useCallback(async () => {
+    if (!id) return
+    
+    try {
+      setLoading(true)
+      setError(null)
+      // API 호출 로직
+      const result = await api.get(`/feature/${id}`)
+      setData(result)
+    } catch (err) {
+      setError(err as Error)
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+  
+  const update = useCallback(async (updates: Partial<FeatureData>) => {
+    if (!id || !data) return
+    
+    try {
+      setLoading(true)
+      const updated = await api.patch(`/feature/${id}`, updates)
+      setData(updated)
+    } catch (err) {
+      setError(err as Error)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }, [id, data])
+  
+  const reset = useCallback(() => {
+    setData(initialData)
+    setError(null)
+    setLoading(false)
+  }, [initialData])
+  
+  useEffect(() => {
+    if (autoFetch) {
+      fetchData()
+    }
+  }, [fetchData, autoFetch])
+  
+  return { data, loading, error, refetch: fetchData, update, reset }
+}
+```
+
+---
+
+## 📝 PR 체크리스트 (강화)
+
+Pull Request 생성 전 **반드시** 확인:
+
+### 🧪 테스트 관련 (필수)
+- [ ] **모든 테스트 통과** (`npm run test:ci`)
+- [ ] **테스트 커버리지 80% 이상** (`npm run test:coverage`)
+- [ ] **새 기능에 대한 테스트 작성 완료**
+- [ ] **엣지 케이스 테스트 포함**
+- [ ] **에러 상황 테스트 포함**
+
+### 🔧 코드 품질
+- [ ] 타입 에러 없음 (`npm run typecheck`)
+- [ ] Lint 에러 없음 (`npm run lint`)
+- [ ] 빌드 성공 (`npm run build`)
+- [ ] 성능 저하 없음
+
+### 📚 문서화
+- [ ] 작업 로그 업데이트
+- [ ] 새 함수/컴포넌트 JSDoc 주석 추가
+- [ ] PR 설명 작성 (변경사항, 테스트 방법 포함)
+- [ ] 관련 이슈 링크
+
+### ✅ 최종 체크
+```bash
+# 모든 검증을 한 번에 실행
+npm run pre-commit
+
+# 성공하면 PR 생성 가능! 🎉
+```
+
+### 🚫 PR 생성 금지 조건
+- 테스트 실패 시
+- 커버리지 80% 미만 시
+- 빌드 실패 시
+- 타입 에러 존재 시
+
+---
+
+**최종 업데이트**: 2025-01-24
+**프로젝트**: SELFFIN - 반셀프 인테리어 AI 플랫폼

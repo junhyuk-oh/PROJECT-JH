@@ -1,0 +1,21 @@
+{
+  "project": "selffin",
+  "version": "1.0.0",
+  "settings": {
+    "memory_retention": "30d",
+    "auto_save": true,
+    "categories": [
+      "decisions",
+      "patterns", 
+      "solutions",
+      "preferences",
+      "work_logs",
+      "code_patterns"
+    ]
+  },
+  "integrations": {
+    "git": true,
+    "files": ["*.md", "*.ts", "*.tsx"],
+    "exclude": ["node_modules", ".next", "coverage", ".memory"]
+  }
+}

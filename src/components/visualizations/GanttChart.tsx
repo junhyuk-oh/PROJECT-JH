@@ -1,58 +1,111 @@
 'use client'
 
-import React, { useRef, useEffect, useState, useCallback } from 'react'
-import { Task } from '@/lib/types'
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { format, addDays, differenceInDays, startOfDay, endOfDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
+
+// Types
+import { Task } from '@/types'
+
+// Constants
+import { TASK_COLORS, Z_INDEX, ANIMATION } from '@/constants'
+
+// Utils
+import { cn } from '@/lib/utils'
 
 interface GanttChartProps {
   tasks: Task[]
   startDate: Date
   endDate: Date
+  className?: string
 }
 
-export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
+// Task position type
+interface TaskPosition {
+  left: number
+  width: number
+  row: number
+  x: number      // 실제 렌더링된 X 좌표
+  y: number      // 실제 렌더링된 Y 좌표
+  endX: number   // 작업 바 끝 X 좌표
+}
+
+// Chart dimensions
+interface ChartDimensions {
+  dayWidth: number
+  rowHeight: number
+  headerHeight: number
+  leftPanelWidth: number
+}
+
+export function GanttChart({ tasks, startDate, endDate, className }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [scrollPosition, setScrollPosition] = useState({ x: 0, y: 0 })
-  const [isPanEnabled, setIsPanEnabled] = useState(false) // Space키로 활성화
+  const [selectedTask, setSelectedTask] = useState<string | null>(null)
+  const [hoveredTask, setHoveredTask] = useState<string | null>(null)
+  const [taskPositions, setTaskPositions] = useState<Map<string, TaskPosition>>(new Map())
 
-  const dayWidth = 40 * scale
-  const rowHeight = 50
-  const headerHeight = 80
-  const leftPanelWidth = 200
+  // Chart dimensions
+  const dimensions = useMemo<ChartDimensions>(() => ({
+    dayWidth: 40 * scale,
+    rowHeight: 50,
+    headerHeight: 80,
+    leftPanelWidth: 200
+  }), [scale])
 
-  const totalDays = differenceInDays(endDate, startDate) + 1
-  const chartWidth = totalDays * dayWidth
+  // 시작일과 종료일 정규화
+  const normalizedStartDate = useMemo(() => startOfDay(startDate), [startDate])
+  const normalizedEndDate = useMemo(() => endOfDay(endDate), [endDate])
+  
+  const totalDays = useMemo(() => differenceInDays(normalizedEndDate, normalizedStartDate) + 1, [normalizedEndDate, normalizedStartDate])
+  const chartWidth = useMemo(() => totalDays * dimensions.dayWidth, [totalDays, dimensions.dayWidth])
 
   // 날짜 배열 생성
-  const dates = Array.from({ length: totalDays }, (_, i) => addDays(startDate, i))
+  const dates = useMemo(() => 
+    Array.from({ length: totalDays }, (_, i) => addDays(normalizedStartDate, i)),
+    [totalDays, normalizedStartDate]
+  )
 
   // 작업 위치 계산
-  const getTaskPosition = (task: Task) => {
+  const calculateTaskPosition = useCallback((task: Task, index: number): TaskPosition => {
     const taskStart = startOfDay(new Date(task.startDate || new Date()))
     const taskEnd = endOfDay(new Date(task.endDate || new Date()))
-    const startOffset = differenceInDays(taskStart, startDate)
+    const startOffset = differenceInDays(taskStart, normalizedStartDate)
     const duration = differenceInDays(taskEnd, taskStart) + 1
     
+    // 그리드에 정확히 맞추기 위한 계산
+    const left = startOffset * dimensions.dayWidth
+    const width = duration * dimensions.dayWidth
+    const row = index
+    
+    // 실제 렌더링 좌표 계산 (바의 패딩 고려)
+    const padding = 2
+    const x = dimensions.leftPanelWidth + left + padding
+    const y = row * dimensions.rowHeight + dimensions.rowHeight / 2
+    const endX = x + width - (padding * 2)
+    
     return {
-      left: startOffset * dayWidth,
-      width: duration * dayWidth,
-      row: tasks.findIndex(t => t.id === task.id)
+      left,
+      width: width - (padding * 2), // 양쪽 패딩
+      row,
+      x,
+      y,
+      endX
     }
-  }
+  }, [normalizedStartDate, dimensions])
 
   // 의존성 선 그리기를 위한 경로 계산
-  const getDependencyPath = (fromTask: Task, toTask: Task, index: number) => {
-    const fromPos = getTaskPosition(fromTask)
-    const toPos = getTaskPosition(toTask)
+  const getDependencyPath = useCallback((fromTaskId: string, toTaskId: string, index: number): string => {
+    const fromPos = taskPositions.get(fromTaskId)
+    const toPos = taskPositions.get(toTaskId)
     
-    const fromX = fromPos.left + fromPos.width - 5
-    const fromY = headerHeight + fromPos.row * rowHeight + rowHeight / 2
-    const toX = toPos.left + 5
-    const toY = headerHeight + toPos.row * rowHeight + rowHeight / 2
+    if (!fromPos || !toPos) return ''
+    
+    // 저장된 실제 좌표 사용
+    const fromX = fromPos.endX
+    const fromY = fromPos.y
+    const toX = toPos.x
+    const toY = toPos.y
     
     // 여러 선이 겹치지 않도록 offset 추가
     const verticalOffset = (index % 3) * 10 - 10
@@ -71,31 +124,16 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
       const midX = Math.max(fromX + horizontalOffset, (fromX + toX) / 2)
       return `M ${fromX} ${fromY} L ${midX} ${fromY} L ${midX} ${toY} L ${toX} ${toY}`
     }
-  }
+  }, [taskPositions])
 
-  // 드래그 핸들러
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isPanEnabled) return
-    
-    setIsDragging(true)
-    setDragStart({
-      x: e.clientX - scrollPosition.x,
-      y: e.clientY - scrollPosition.y
-    })
-  }
+  // 작업 클릭/호버 핸들러
+  const handleTaskClick = useCallback((taskId: string) => {
+    setSelectedTask(current => current === taskId ? null : taskId)
+  }, [])
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !isPanEnabled) return
-    
-    const newX = e.clientX - dragStart.x
-    const newY = e.clientY - dragStart.y
-    
-    setScrollPosition({ x: newX, y: newY })
-  }
-
-  const handleMouseUp = () => {
-    setIsDragging(false)
-  }
+  const handleTaskHover = useCallback((taskId: string | null) => {
+    setHoveredTask(taskId)
+  }, [])
 
   // 줌 핸들러
   const handleZoom = useCallback((delta: number) => {
@@ -103,31 +141,6 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
     setScale(newScale)
   }, [scale])
 
-  // 키보드 이벤트 핸들러
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault()
-        setIsPanEnabled(true)
-      }
-    }
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault()
-        setIsPanEnabled(false)
-        setIsDragging(false)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
-    }
-  }, [])
 
   // 터치 이벤트를 위한 패시브 리스너 추가
   useEffect(() => {
@@ -145,33 +158,53 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
     return () => container.removeEventListener('wheel', handleWheel)
   }, [scale, handleZoom])
 
-  // 작업 상태별 색상
-  const getTaskColor = (task: Task) => {
-    if (task.isCritical) return '#DC2626' // 임계경로 - 빨간색
-    if (task.progress === 100) return '#10B981' // 완료 - 초록색
-    if (task.progress > 0) return '#F59E0B' // 진행중 - 주황색
-    return '#3B82F6' // 예정 - 파란색
-  }
+  // 작업 위치 업데이트
+  useEffect(() => {
+    const positions = new Map<string, TaskPosition>()
+    tasks.forEach((task, index) => {
+      positions.set(task.id, calculateTaskPosition(task, index))
+    })
+    setTaskPositions(positions)
+  }, [tasks, calculateTaskPosition])
 
-  // 의존성 관계 하이라이트
-  const [hoveredTask, setHoveredTask] = useState<string | null>(null)
-  const [selectedTask, setSelectedTask] = useState<string | null>(null)
-
-  const isTaskHighlighted = (taskId: string) => {
+  // 작업이 하이라이트되어야 하는지 확인
+  const isTaskHighlighted = useCallback((taskId: string): boolean => {
     if (!hoveredTask && !selectedTask) return false
-    const activeTask = selectedTask || hoveredTask
-    const task = tasks.find(t => t.id === activeTask)
-    if (!task) return false
     
-    return taskId === activeTask || 
-           task.dependencies?.includes(taskId) || 
-           tasks.some(t => t.dependencies?.includes(activeTask) && t.id === taskId)
-  }
+    const activeTaskId = hoveredTask || selectedTask
+    if (activeTaskId === taskId) return true
+    
+    // 의존관계가 있는 작업도 하이라이트
+    const activeTask = tasks.find(t => t.id === activeTaskId)
+    if (!activeTask) return false
+    
+    // 현재 작업이 의존하는 작업인지 확인
+    if (activeTask.dependencies.includes(taskId)) return true
+    
+    // 현재 작업에 의존하는 작업인지 확인
+    const dependentTask = tasks.find(t => t.id === taskId)
+    return dependentTask && activeTaskId ? dependentTask.dependencies.includes(activeTaskId) : false
+  }, [hoveredTask, selectedTask, tasks])
+
+  // 작업 상태별 색상
+  const getTaskColor = useCallback((task: Task): string => {
+    if (task.isCritical) return TASK_COLORS.critical
+    if (task.progress === 100) return TASK_COLORS.completed
+    if (task.progress && task.progress > 0) return TASK_COLORS.inProgress
+    return TASK_COLORS.pending
+  }, [])
+
 
   return (
-    <div className="relative h-full bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className={cn(
+      "relative h-full bg-white rounded-lg shadow-sm overflow-hidden",
+      className
+    )}>
       {/* 컨트롤 패널 */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+      <div 
+        className="absolute top-4 right-4 flex flex-col gap-2"
+        style={{ zIndex: Z_INDEX.sticky }}
+      >
         {/* 줌 컨트롤 */}
         <div className="flex gap-2 bg-white p-2 rounded-lg shadow-md border border-gray-200">
           <button
@@ -197,27 +230,20 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
           </button>
         </div>
         
-        {/* 팬 모드 표시 */}
-        {isPanEnabled && (
-          <div className="bg-blue-500 text-white px-3 py-2 rounded-lg shadow-md text-xs font-medium">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-              </svg>
-              <span>팬 모드 활성</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 네비게이션 화살표 */}
-      <div className="absolute top-1/2 left-2 transform -translate-y-1/2 z-20">
+      <div 
+        className="absolute top-1/2 left-2 transform -translate-y-1/2"
+        style={{ zIndex: Z_INDEX.sticky }}
+      >
         <button
           onClick={() => {
             const container = containerRef.current
             if (container) container.scrollLeft -= 200
           }}
-          className="w-10 h-10 bg-white/90 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-md"
+          className="w-10 h-10 bg-white/90 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-md transition-colors"
+          style={{ transitionDuration: `${ANIMATION.duration.fast}ms` }}
           title="왼쪽으로 이동"
         >
           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,13 +252,17 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
         </button>
       </div>
       
-      <div className="absolute top-1/2 right-2 transform -translate-y-1/2 z-20">
+      <div 
+        className="absolute top-1/2 right-2 transform -translate-y-1/2"
+        style={{ zIndex: Z_INDEX.sticky }}
+      >
         <button
           onClick={() => {
             const container = containerRef.current
             if (container) container.scrollLeft += 200
           }}
-          className="w-10 h-10 bg-white/90 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-md"
+          className="w-10 h-10 bg-white/90 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-md transition-colors"
+          style={{ transitionDuration: `${ANIMATION.duration.fast}ms` }}
           title="오른쪽으로 이동"
         >
           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -244,37 +274,39 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
       <div
         ref={containerRef}
         className="relative w-full h-full overflow-auto"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
         onClick={() => setSelectedTask(null)}
-        style={{ cursor: isPanEnabled ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
       >
         {/* 고정 헤더 */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
           <div className="flex">
             {/* 작업명 헤더 */}
-            <div className="sticky left-0 z-20 bg-white border-r border-gray-200" style={{ width: leftPanelWidth }}>
-              <div className="h-20 px-4 flex items-center">
+            <div 
+              className="sticky left-0 z-20 bg-white border-r border-gray-200" 
+              style={{ width: dimensions.leftPanelWidth, height: dimensions.headerHeight }}
+            >
+              <div className="h-full px-4 flex items-center">
                 <span className="font-semibold text-gray-700">작업명</span>
               </div>
             </div>
             
             {/* 날짜 헤더 */}
             <div className="relative" style={{ width: chartWidth }}>
-              <div className="flex h-20">
+              <div className="flex" style={{ height: dimensions.headerHeight }}>
                 {dates.map((date, i) => (
                   <div
                     key={i}
-                    className="border-r border-gray-100 flex flex-col justify-center items-center"
-                    style={{ width: dayWidth }}
+                    className="border-r border-gray-200 flex flex-col justify-center items-center relative"
+                    style={{ width: dimensions.dayWidth }}
                   >
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 font-medium">
                       {format(date, 'MM/dd', { locale: ko })}
                     </span>
                     <span className="text-xs text-gray-400">
                       {format(date, 'EEE', { locale: ko })}
+                    </span>
+                    {/* 디버깅용 일수 표시 */}
+                    <span className="text-[10px] text-gray-300 absolute bottom-1">
+                      D{i + 1}
                     </span>
                   </div>
                 ))}
@@ -288,20 +320,20 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
           {/* 그리드 배경 */}
           <svg
             className="absolute inset-0"
-            width={leftPanelWidth + chartWidth}
-            height={tasks.length * rowHeight}
-            style={{ transform: `translate(${scrollPosition.x}px, ${scrollPosition.y}px)` }}
+            width={dimensions.leftPanelWidth + chartWidth}
+            height={tasks.length * dimensions.rowHeight}
           >
             {/* 세로 그리드 라인 */}
             {dates.map((_, i) => (
               <line
                 key={i}
-                x1={leftPanelWidth + i * dayWidth}
+                x1={dimensions.leftPanelWidth + i * dimensions.dayWidth}
                 y1={0}
-                x2={leftPanelWidth + i * dayWidth}
-                y2={tasks.length * rowHeight}
-                stroke="#e5e7eb"
-                strokeWidth="1"
+                x2={dimensions.leftPanelWidth + i * dimensions.dayWidth}
+                y2={tasks.length * dimensions.rowHeight}
+                stroke={i % 7 === 0 ? "#d1d5db" : "#e5e7eb"}
+                strokeWidth={i % 7 === 0 ? "2" : "1"}
+                strokeDasharray={i % 7 === 0 ? "0" : "2,2"}
               />
             ))}
             
@@ -309,10 +341,10 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
             {tasks.map((_, i) => (
               <line
                 key={i}
-                x1={leftPanelWidth}
-                y1={(i + 1) * rowHeight}
-                x2={leftPanelWidth + chartWidth}
-                y2={(i + 1) * rowHeight}
+                x1={dimensions.leftPanelWidth}
+                y1={(i + 1) * dimensions.rowHeight}
+                x2={dimensions.leftPanelWidth + chartWidth}
+                y2={(i + 1) * dimensions.rowHeight}
                 stroke="#e5e7eb"
                 strokeWidth="1"
               />
@@ -321,14 +353,15 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
 
           {/* 작업 행 */}
           {tasks.map((task, index) => {
-            const position = getTaskPosition(task)
+            const position = taskPositions.get(task.id)
+            if (!position) return null
             
             return (
               <div key={task.id} className="flex">
                 {/* 작업명 */}
                 <div
                   className="sticky left-0 z-10 bg-white border-r border-gray-200 px-4 flex items-center"
-                  style={{ width: leftPanelWidth, height: rowHeight }}
+                  style={{ width: dimensions.leftPanelWidth, height: dimensions.rowHeight }}
                 >
                   <span className="text-sm text-gray-700 truncate">{task.name}</span>
                 </div>
@@ -336,41 +369,47 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
                 {/* 작업 바 */}
                 <div
                   className="relative"
-                  style={{ width: chartWidth, height: rowHeight }}
+                  style={{ width: chartWidth, height: dimensions.rowHeight }}
                 >
                   <div
-                    className="absolute top-3 rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium transition-all hover:shadow-md cursor-pointer"
+                    className="absolute rounded-md shadow-sm flex items-center px-2 text-white text-xs font-medium transition-all hover:shadow-md cursor-pointer"
                     style={{
-                      left: position.left,
+                      left: position.left + 2,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
                       width: position.width,
-                      height: rowHeight - 24,
+                      height: dimensions.rowHeight - 20,
                       backgroundColor: getTaskColor(task),
                       opacity: hoveredTask && !isTaskHighlighted(task.id) ? 0.3 : 1,
-                      transform: `translate(${scrollPosition.x}px, 0)`,
-                      border: selectedTask === task.id ? '2px solid #1F2937' : 'none'
+                      border: selectedTask === task.id ? '2px solid #1F2937' : 'none',
+                      boxSizing: 'border-box'
                     }}
-                    onMouseEnter={() => setHoveredTask(task.id)}
-                    onMouseLeave={() => setHoveredTask(null)}
+                    onMouseEnter={() => handleTaskHover(task.id)}
+                    onMouseLeave={() => handleTaskHover(null)}
                     onClick={(e) => {
                       e.stopPropagation()
-                      setSelectedTask(selectedTask === task.id ? null : task.id)
+                      handleTaskClick(task.id)
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="truncate">{task.name}</span>
+                      <span className="truncate flex-1">{task.name}</span>
                       {task.progress !== undefined && (
-                        <span className="ml-2 font-bold">{task.progress}%</span>
+                        <span className="ml-2 font-bold whitespace-nowrap">{task.progress}%</span>
                       )}
+                    </div>
+                    {/* 디버깅용 날짜 표시 */}
+                    <div className="absolute -bottom-4 left-0 text-[10px] text-gray-500 whitespace-nowrap">
+                      {format(new Date(task.startDate!), 'MM/dd')} - {format(new Date(task.endDate!), 'MM/dd')}
                     </div>
                   </div>
                   {/* 진행률 바 */}
                   {task.progress !== undefined && task.progress > 0 && task.progress < 100 && (
                     <div
-                      className="absolute bottom-2 left-0 h-1 bg-white/30 rounded"
+                      className="absolute h-1 bg-white/30 rounded"
                       style={{
-                        left: position.left,
-                        width: position.width * (task.progress / 100),
-                        transform: `translate(${scrollPosition.x}px, 0)`
+                        left: position.left + 2,
+                        bottom: '15%',
+                        width: position.width * (task.progress / 100)
                       }}
                     />
                   )}
@@ -382,9 +421,8 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
           {/* 의존성 화살표 */}
           <svg
             className="absolute top-0 left-0 pointer-events-none"
-            width={leftPanelWidth + chartWidth}
-            height={tasks.length * rowHeight}
-            style={{ transform: `translate(${scrollPosition.x}px, ${scrollPosition.y}px)` }}
+            width={dimensions.leftPanelWidth + chartWidth}
+            height={tasks.length * dimensions.rowHeight}
           >
             {tasks.map((task, taskIndex) => 
               task.dependencies?.map((depId, depIndex) => {
@@ -397,7 +435,7 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
                 return (
                   <g key={`${depId}-${task.id}`}>
                     <path
-                      d={getDependencyPath(fromTask, task, taskIndex * 10 + depIndex)}
+                      d={getDependencyPath(fromTask.id, task.id, taskIndex * 10 + depIndex)}
                       fill="none"
                       stroke={isHighlighted ? '#DC2626' : '#9CA3AF'}
                       strokeWidth={isHighlighted ? "3" : "2"}
@@ -406,16 +444,21 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
                       markerEnd={`url(#arrowhead-${isHighlighted ? 'highlight' : 'normal'})`}
                     />
                     {/* 의존성 레이블 */}
-                    {isHighlighted && (
-                      <text
-                        x={(getTaskPosition(fromTask).left + getTaskPosition(fromTask).width + getTaskPosition(task).left) / 2}
-                        y={headerHeight + Math.min(getTaskPosition(fromTask).row, getTaskPosition(task).row) * rowHeight - 5}
-                        textAnchor="middle"
-                        className="fill-red-600 text-xs font-medium"
-                      >
-                        의존관계
-                      </text>
-                    )}
+                    {isHighlighted && (() => {
+                      const fromPos = taskPositions.get(fromTask.id)
+                      const toPos = taskPositions.get(task.id)
+                      if (!fromPos || !toPos) return null
+                      return (
+                        <text
+                          x={(fromPos.endX + toPos.x) / 2}
+                          y={Math.min(fromPos.y, toPos.y) - 10}
+                          textAnchor="middle"
+                          className="fill-red-600 text-xs font-medium"
+                        >
+                          의존관계
+                        </text>
+                      )
+                    })()}
                   </g>
                 )
               })
@@ -493,7 +536,7 @@ export function GanttChart({ tasks, startDate, endDate }: GanttChartProps) {
             <div className="text-xs font-semibold text-gray-700 mb-1">조작 방법</div>
             <div className="text-xs text-gray-500 space-y-1">
               <div>• 작업 클릭: 의존관계 보기</div>
-              <div>• <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Space</kbd> + 드래그: 화면 이동</div>
+              <div>• 좌우 화살표 버튼: 화면 이동</div>
               <div>• <kbd className="px-1 py-0.5 bg-gray-100 rounded text-xs">Ctrl</kbd> + 스크롤: 확대/축소</div>
             </div>
           </div>

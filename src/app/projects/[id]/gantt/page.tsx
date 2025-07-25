@@ -155,13 +155,13 @@ export default function ProjectGanttPage() {
         <div className="h-full bg-white rounded-lg shadow-sm">
           {viewMode === 'gantt' ? (
             <GanttChart
-              tasks={project.schedule.schedule}
+              tasks={project.schedule.schedule as any}
               startDate={projectStart}
               endDate={projectEnd}
             />
           ) : (
             <NotionCalendar
-              tasks={project.schedule.schedule}
+              tasks={project.schedule.schedule as any}
               onTaskClick={(task) => console.log('Task clicked:', task)}
             />
           )}

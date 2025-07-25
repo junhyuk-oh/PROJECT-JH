@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { GanttChart } from '@/components/visualizations/GanttChart'
 import { NotionCalendar } from '@/components/visualizations/NotionCalendar'
-import { Task, ScheduleOptions, TaskType } from '@/lib/types'
+import { Task, ScheduleOptions, TaskType } from '@/types'
 import { ScheduleGenerator } from '@/lib/scheduleGenerator'
 import { ChevronLeft } from '@/components/icons'
 import { useRouter } from 'next/navigation'
@@ -159,16 +159,17 @@ export default function GanttPage() {
       projectType: 'residential',
       area: 25,
       budget: 50000000,
-      startDate: new Date()
+      startDate: new Date(),
+      currentState: 'new'
     }
     
     const generator = new ScheduleGenerator(projectData.tasks, options)
     const schedule = generator.generateSchedule()
     
-    if (schedule && schedule.tasks.length > 0) {
-      setTasks(schedule.tasks)
-      setProjectStart(new Date(schedule.startDate))
-      setProjectEnd(new Date(schedule.endDate))
+    if (schedule && schedule.schedule.length > 0) {
+      setTasks(schedule.schedule)
+      setProjectStart(new Date())
+      setProjectEnd(new Date(Date.now() + schedule.totalDuration * 24 * 60 * 60 * 1000))
     }
     
     setLoading(false)

@@ -79,6 +79,14 @@ export function CPMAnalysisProgress({ onComplete, isAnalyzing }: CPMAnalysisProg
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [monteCarloProgress, setMonteCarloProgress] = useState(0)
+  const [isCompleted, setIsCompleted] = useState(false)
+
+  // 완료 처리를 별도의 useEffect로 분리
+  useEffect(() => {
+    if (isCompleted && onComplete) {
+      onComplete()
+    }
+  }, [isCompleted, onComplete])
 
   useEffect(() => {
     if (!isAnalyzing) return
@@ -89,49 +97,58 @@ export function CPMAnalysisProgress({ onComplete, isAnalyzing }: CPMAnalysisProg
 
     const interval = setInterval(() => {
       setCurrentStepIndex((prev) => {
-        if (prev >= steps.length) {
+        const nextIndex = prev + 1
+        
+        if (prev < steps.length) {
+          // 현재 단계를 processing으로 변경
+          setSteps((prevSteps) => 
+            prevSteps.map((step, index) => {
+              if (index === prev) {
+                return { ...step, status: 'processing' }
+              } else if (index < prev) {
+                return { ...step, status: 'completed' }
+              }
+              return step
+            })
+          )
+
+          // Monte Carlo 단계에서는 진행률 표시
+          if (prev === monteCarloStepIndex) {
+            let progress = 0
+            const progressInterval = setInterval(() => {
+              progress += 10
+              setMonteCarloProgress(progress)
+              setSteps((prevSteps) => 
+                prevSteps.map((step, index) => 
+                  index === monteCarloStepIndex 
+                    ? { ...step, progress } 
+                    : step
+                )
+              )
+              if (progress >= 100) {
+                clearInterval(progressInterval)
+              }
+            }, stepDuration / 10)
+          }
+        }
+        
+        // 모든 단계 완료 시
+        if (nextIndex > steps.length) {
           clearInterval(interval)
-          onComplete?.()
+          // 마지막 단계를 completed로 표시
+          setSteps((prevSteps) => 
+            prevSteps.map(step => ({ ...step, status: 'completed' }))
+          )
+          setIsCompleted(true)
           return prev
         }
 
-        // 현재 단계를 processing으로 변경
-        setSteps((prevSteps) => 
-          prevSteps.map((step, index) => {
-            if (index === prev) {
-              return { ...step, status: 'processing' }
-            } else if (index < prev) {
-              return { ...step, status: 'completed' }
-            }
-            return step
-          })
-        )
-
-        // Monte Carlo 단계에서는 진행률 표시
-        if (prev === monteCarloStepIndex) {
-          let progress = 0
-          const progressInterval = setInterval(() => {
-            progress += 10
-            setMonteCarloProgress(progress)
-            setSteps((prevSteps) => 
-              prevSteps.map((step, index) => 
-                index === monteCarloStepIndex 
-                  ? { ...step, progress } 
-                  : step
-              )
-            )
-            if (progress >= 100) {
-              clearInterval(progressInterval)
-            }
-          }, stepDuration / 10)
-        }
-
-        return prev + 1
+        return nextIndex
       })
     }, stepDuration)
 
     return () => clearInterval(interval)
-  }, [isAnalyzing, onComplete, steps.length])
+  }, [isAnalyzing, steps.length])
 
   return (
     <div className="w-full max-w-2xl mx-auto p-6">
